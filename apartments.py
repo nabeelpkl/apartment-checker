@@ -35,8 +35,19 @@ def check_listings(room):
 
     soup = BeautifulSoup(response.text, "html.parser")
     
-    # Listings appear inside a div with class 'all-units-section cs_search_card search-content'
-    container = soup.find("div", class_="all-units-section cs_search_card search-content")
+    # Try different container selectors
+    container = None
+    container_selectors = [
+        "div.all-units-section.cs_search_card.search-content",
+        "div.all-units-section",
+        "div.search-content"
+    ]
+    
+    for selector in container_selectors:
+        container = soup.select_one(selector)
+        if container:
+            break
+    
     if not container:
         print(f"⚠️ Could not find listings container for {ROOM_TYPES[room]}. The page structure may have changed.")
         return
