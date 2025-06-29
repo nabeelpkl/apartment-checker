@@ -28,11 +28,6 @@ def check_listings(room):
         print(f"❌ Failed to fetch listings for {ROOM_TYPES[room]} (Status: {response.status_code})")
         return
 
-    # Save HTML for debugging
-    with open(f"debug_response_{room}.html", "w", encoding="utf-8") as f:
-        f.write(response.text)
-    print(f"📄 Saved HTML response to debug_response_{room}.html")
-
     soup = BeautifulSoup(response.text, "html.parser")
     
     # Try different container selectors
@@ -95,7 +90,9 @@ def check_listings(room):
                     if "Price" in text:
                         price_i = span.find("i")
                         if price_i:
-                            price = price_i.get_text(strip=True)
+                            # Clean up the price text
+                            price_text = price_i.get_text(strip=True)
+                            price = price_text.replace('\n', '').replace('/', '').replace('Year', '').strip()
                     elif "Unit No." in text:
                         unit_i = span.find("i")
                         if unit_i:

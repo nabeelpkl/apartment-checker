@@ -45,8 +45,8 @@ jobs:
       run: |
         RESULTS=$(cat apartment_results.txt)
         if echo "$RESULTS" | grep -q "✅.*listing(s) found"; then
-          MESSAGE="🏠 *NEW APARTMENTS AVAILABLE!*%0A%0A📍 *Location:* Muhaisnah Fourth%0A📅 *Date:* $(date '+%Y-%m-%d')%0A⏰ *Time:* $(date '+%H:%M')%0A%0A━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%0A%0A$RESULTS%0A%0A━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%0A%0A🔗 [View full results](https://github.com/nabeelpkl/apartment-checker/actions)"
+          MESSAGE="🏠 *NEW APARTMENTS AVAILABLE!*%0A%0A📍 *Location:* Muhaisnah Fourth%0A📅 *Date:* $(date '+%Y-%m-%d')%0A⏰ *Time:* $(date '+%H:%M')%0A%0A━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%0A%0A$RESULTS%0A%0A━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         else
-          MESSAGE="🏠 *Apartment Check Complete*%0A%0A📍 *Location:* Muhaisnah Fourth%0A📅 *Date:* $(date '+%Y-%m-%d')%0A⏰ *Time:* $(date '+%H:%M')%0A%0A━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%0A%0A$RESULTS%0A%0A━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%0A%0A🔗 [View full results](https://github.com/nabeelpkl/apartment-checker/actions)"
+          MESSAGE="🏠 *Apartment Check Complete*%0A%0A📍 *Location:* Muhaisnah Fourth%0A📅 *Date:* $(date '+%Y-%m-%d')%0A⏰ *Time:* $(date '+%H:%M')%0A%0A━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%0A%0A$RESULTS%0A%0A━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         fi
         curl -s -X POST "https://api.telegram.org/bot7508698254:AAFnqGJxmyvvPcMHi_kqq2CNwa9DIH3JYDM/sendMessage" -d "chat_id=155536199&text=$MESSAGE&parse_mode=Markdown" 
