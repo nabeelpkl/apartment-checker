@@ -2,8 +2,10 @@ name: Apartment Availability Checker
 
 on:
   schedule:
-    # Run daily at 5:30 PM (17:30 UTC)
-    - cron: '30 17 * * *'
+    # Run daily at 5:15 PM, 6:30 PM, and 8:30 PM (17:15, 18:30, and 20:30 UTC)
+    - cron: '15 17 * * *'
+    - cron: '30 18 * * *'
+    - cron: '30 20 * * *'
   workflow_dispatch:  # Allow manual trigger
 
 jobs:
