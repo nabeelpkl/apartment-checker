@@ -1,6 +1,9 @@
 # Debug HTML files
 debug_response_*.html
 
+# Helper scripts (temporary)
+get_chat_id.py
+
 # Python cache files
 __pycache__/
 *.pyc

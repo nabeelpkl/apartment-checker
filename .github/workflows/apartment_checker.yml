@@ -64,6 +64,20 @@ jobs:
         echo "Sending Telegram notification with results:"
         echo "$RESULTS"
         
+        # Debug: Check if secrets are available
+        echo "Checking secrets availability..."
+        if [ -n "${{ secrets.TELEGRAM_BOT_TOKEN }}" ]; then
+          echo "✅ TELEGRAM_BOT_TOKEN is set"
+        else
+          echo "❌ TELEGRAM_BOT_TOKEN is NOT set"
+        fi
+        
+        if [ -n "${{ secrets.TELEGRAM_CHAT_ID }}" ]; then
+          echo "✅ TELEGRAM_CHAT_ID is set: ${{ secrets.TELEGRAM_CHAT_ID }}"
+        else
+          echo "❌ TELEGRAM_CHAT_ID is NOT set"
+        fi
+        
         # Check if all requests were blocked by CAPTCHA
         if echo "$RESULTS" | grep -q "⚠️ CAPTCHA detected" && echo "$RESULTS" | grep -c "⚠️ CAPTCHA detected" | grep -q "3"; then
           MESSAGE="🏠 *Website Blocking Automated Requests*%0A%0A📍 *Location:* Muhaisnah Fourth%0A📅 *Date:* $(date '+%Y-%m-%d')%0A⏰ *Time:* $(date '+%H:%M')%0A%0A━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%0A%0A⚠️ *Status:* The WASL website is currently blocking automated requests with CAPTCHA protection.%0A%0A🔍 *What this means:*%0A• The website detected automated access%0A• All apartment searches were blocked%0A• This is a temporary protection measure%0A%0A💡 *Next steps:*%0A• Try again later when the protection is relaxed%0A• Check manually on the website if needed%0A%0A━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -72,4 +86,19 @@ jobs:
         else
           MESSAGE="🏠 *Apartment Check Complete*%0A%0A📍 *Location:* Muhaisnah Fourth%0A📅 *Date:* $(date '+%Y-%m-%d')%0A⏰ *Time:* $(date '+%H:%M')%0A%0A━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%0A%0A$RESULTS%0A%0A━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         fi
-        curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}&text=$MESSAGE&parse_mode=Markdown" 
+        
+        echo "Attempting to send Telegram message..."
+        RESPONSE=$(curl -s -w "%{http_code}" -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}&text=$MESSAGE&parse_mode=Markdown")
+        
+        # Extract HTTP status code
+        HTTP_CODE="${RESPONSE: -3}"
+        RESPONSE_BODY="${RESPONSE%???}"
+        
+        echo "Telegram API Response Code: $HTTP_CODE"
+        echo "Telegram API Response Body: $RESPONSE_BODY"
+        
+        if [ "$HTTP_CODE" = "200" ]; then
+          echo "✅ Telegram message sent successfully!"
+        else
+          echo "❌ Failed to send Telegram message. HTTP Code: $HTTP_CODE"
+        fi 
