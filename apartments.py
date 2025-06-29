@@ -1,8 +1,9 @@
 import requests
 from bs4 import BeautifulSoup
+import time
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0"
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
 
 ROOM_TYPES = {
@@ -30,9 +31,14 @@ def check_listings(room):
 
     if response.status_code != 200:
         print(f"❌ Failed to fetch listings for {ROOM_TYPES[room]} (Status: {response.status_code})")
-        return
+        return None
 
     soup = BeautifulSoup(response.text, "html.parser")
+    
+    # Check if we got a CAPTCHA page
+    if "Radware Captcha Page" in response.text or "hcaptcha" in response.text.lower():
+        print(f"⚠️ CAPTCHA detected for {ROOM_TYPES[room]}. The website is blocking automated requests.")
+        return None
     
     # Try different container selectors
     container = None
@@ -45,40 +51,66 @@ def check_listings(room):
     for selector in container_selectors:
         container = soup.select_one(selector)
         if container:
-            print(f"✅ Found container for {ROOM_TYPES[room]} using selector: {selector}")
             break
     
     if not container:
         print(f"⚠️ Could not find listings container for {ROOM_TYPES[room]}. The page structure may have changed.")
-        print(f"📁 Saved debug HTML to debug_response_{room}.html")
-        return
+        return None
 
-    # Check if there's a "no search found" message
-    no_results = container.find("section", class_="no-search-found")
-    if no_results:
-        print(f"❌ No {ROOM_TYPES[room]} listings found in {LOCATION.replace('-', ' ').title()}")
-        return
-
+    # Look for listings first, regardless of "no search found" message
     listings = container.find_all("section", class_="all-units-cards")
-    print(f"🔍 Found {len(listings)} total listings for {ROOM_TYPES[room]}")
     
-    # Filter listings to only show those from the specified location
+    if not listings:
+        # Only show "no search found" if there are actually no listings
+        no_results = container.find("section", class_="no-search-found")
+        if no_results:
+            print(f"❌ No {ROOM_TYPES[room]} listings found in {LOCATION.replace('-', ' ').title()}")
+        else:
+            print(f"❌ No {ROOM_TYPES[room]} listings found in {LOCATION.replace('-', ' ').title()}")
+        return None
+    
+    # Filter listings to only show those from the specified location AND correct room type
     filtered_listings = []
     for listing in listings:
         # Get location from the card details
         location_elem = listing.find("div", class_="card-details")
+        location_text = ""
+        room_type_text = ""
+        
         if location_elem:
             span = location_elem.find("span")
             if span:
                 location_text = span.get_text(strip=True)
-                # Check if this listing is from the specified location
-                # Convert location names to a comparable format
-                if LOCATION.replace('-', ' ').lower() in location_text.lower() or location_text.lower() in LOCATION.replace('-', ' ').lower():
-                    filtered_listings.append(listing)
+        
+        # Get room type from card details
+        card_details = listing.find_all("div", class_="card-details")
+        for detail in card_details:
+            span = detail.find("span")
+            if span:
+                text = span.get_text(strip=True)
+                if "Type:" in text:
+                    room_type_i = span.find("i")
+                    if room_type_i:
+                        room_type_text = room_type_i.get_text(strip=True).lower()
+                        break
+        
+        # Check if this listing is from the specified location AND matches the requested room type
+        location_match = LOCATION.replace('-', ' ').lower() in location_text.lower() or location_text.lower() in LOCATION.replace('-', ' ').lower()
+        
+        # Check room type match
+        room_match = False
+        if room == 1:
+            room_match = "1 bedroom" in room_type_text or "studio" in room_type_text
+        elif room == 2:
+            room_match = "2 bedroom" in room_type_text or "2 room" in room_type_text
+        elif room == 3:
+            room_match = "3 bedroom" in room_type_text or "3 room" in room_type_text
+        
+        if location_match and room_match:
+            filtered_listings.append(listing)
 
-    print(f"\n🏠 {ROOM_TYPES[room]} Listings in {LOCATION.replace('-', ' ').title()}:")
     if filtered_listings:
-        print(f"✅ {len(filtered_listings)} listing(s) found!")
+        result_lines = []
         for listing in filtered_listings:
             # Get building name from h3 tag
             title_elem = listing.find("h3")
@@ -108,10 +140,45 @@ def check_listings(room):
                         # This is likely the location
                         location = text
             
-            print(f"- {title} (Unit {unit_no}): {price} AED/Year - {location}")
+            listing_text = f"- {title} (Unit {unit_no}): {price} AED/Year - {location}"
+            result_lines.append(listing_text)
+        
+        return {
+            'room_type': ROOM_TYPES[room],
+            'count': len(filtered_listings),
+            'listings': result_lines
+        }
     else:
-        print("❌ No listings available in the specified location.")
+        return None
+
+def main():
+    all_results = []
+    
+    for room in ROOM_TYPES:
+        result = check_listings(room)
+        
+        if result:
+            all_results.append(result)
+        else:
+            all_results.append({
+                'room_type': ROOM_TYPES[room],
+                'count': 0,
+                'listings': []
+            })
+        
+        # Add delay between requests (except for the last one)
+        if room < max(ROOM_TYPES.keys()):
+            time.sleep(10)
+    
+    # Print final results
+    for result in all_results:
+        print(f"\n🏠 {result['room_type']} Listings in {LOCATION.replace('-', ' ').title()}:")
+        if result['count'] > 0:
+            print(f"✅ {result['count']} listing(s) found!")
+            for listing in result['listings']:
+                print(listing)
+        else:
+            print("❌ No listings available in the specified location.")
 
 if __name__ == "__main__":
-    for room in ROOM_TYPES:
-        check_listings(room)
+    main()
