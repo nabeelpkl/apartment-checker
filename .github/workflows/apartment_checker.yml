@@ -61,7 +61,11 @@ jobs:
         RESULTS=$(cat apartment_results.txt)
         echo "Sending Telegram notification with results:"
         echo "$RESULTS"
-        if echo "$RESULTS" | grep -q "✅.*listing(s) found"; then
+        
+        # Check if all requests were blocked by CAPTCHA
+        if echo "$RESULTS" | grep -q "⚠️ CAPTCHA detected" && echo "$RESULTS" | grep -c "⚠️ CAPTCHA detected" | grep -q "3"; then
+          MESSAGE="🏠 *Website Blocking Automated Requests*%0A%0A📍 *Location:* Muhaisnah Fourth%0A📅 *Date:* $(date '+%Y-%m-%d')%0A⏰ *Time:* $(date '+%H:%M')%0A%0A━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%0A%0A⚠️ *Status:* The WASL website is currently blocking automated requests with CAPTCHA protection.%0A%0A🔍 *What this means:*%0A• The website detected automated access%0A• All apartment searches were blocked%0A• This is a temporary protection measure%0A%0A💡 *Next steps:*%0A• Try again later when the protection is relaxed%0A• Check manually on the website if needed%0A%0A━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        elif echo "$RESULTS" | grep -q "✅.*listing(s) found"; then
           MESSAGE="🏠 *NEW APARTMENTS AVAILABLE!*%0A%0A📍 *Location:* Muhaisnah Fourth%0A📅 *Date:* $(date '+%Y-%m-%d')%0A⏰ *Time:* $(date '+%H:%M')%0A%0A━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%0A%0A$RESULTS%0A%0A━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         else
           MESSAGE="🏠 *Apartment Check Complete*%0A%0A📍 *Location:* Muhaisnah Fourth%0A📅 *Date:* $(date '+%Y-%m-%d')%0A⏰ *Time:* $(date '+%H:%M')%0A%0A━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%0A%0A$RESULTS%0A%0A━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

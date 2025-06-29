@@ -1,9 +1,21 @@
 import requests
 from bs4 import BeautifulSoup
 import time
+import random
 
+# More realistic browser headers
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.5",
+    "Accept-Encoding": "gzip, deflate, br",
+    "DNT": "1",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Cache-Control": "max-age=0"
 }
 
 ROOM_TYPES = {
@@ -24,21 +36,54 @@ def check_listings(room):
         "view": "grid"
     }
 
-    response = requests.get(BASE_URL, headers=HEADERS, params=params)
-    # Always save the HTML response for debugging
-    with open(f"debug_response_{room}.html", "w", encoding="utf-8") as f:
-        f.write(response.text)
-
-    if response.status_code != 200:
-        print(f"❌ Failed to fetch listings for {ROOM_TYPES[room]} (Status: {response.status_code})")
+    # Add random delay before request (1-3 seconds)
+    time.sleep(random.uniform(1, 3))
+    
+    # Try multiple strategies
+    strategies = [
+        # Strategy 1: Normal request
+        lambda: requests.get(BASE_URL, headers=HEADERS, params=params),
+        # Strategy 2: Different User-Agent
+        lambda: requests.get(BASE_URL, headers={**HEADERS, "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}, params=params),
+        # Strategy 3: Without some headers
+        lambda: requests.get(BASE_URL, headers={k: v for k, v in HEADERS.items() if k not in ["Sec-Fetch-Dest", "Sec-Fetch-Mode", "Sec-Fetch-Site"]}, params=params)
+    ]
+    
+    response = None
+    for i, strategy in enumerate(strategies):
+        try:
+            response = strategy()
+            # Always save the HTML response for debugging
+            with open(f"debug_response_{room}.html", "w", encoding="utf-8") as f:
+                f.write(response.text)
+            
+            if response.status_code == 200:
+                # Check if we got a CAPTCHA page
+                if "Radware Captcha Page" in response.text or "hcaptcha" in response.text.lower():
+                    if i < len(strategies) - 1:  # Try next strategy
+                        print(f"⚠️ CAPTCHA detected for {ROOM_TYPES[room]} (strategy {i+1}), trying next approach...")
+                        time.sleep(random.uniform(2, 5))
+                        continue
+                    else:
+                        print(f"⚠️ CAPTCHA detected for {ROOM_TYPES[room]}. All strategies failed.")
+                        return None
+                else:
+                    break  # Success, no CAPTCHA
+            else:
+                print(f"❌ Failed to fetch listings for {ROOM_TYPES[room]} (Status: {response.status_code})")
+                return None
+                
+        except Exception as e:
+            print(f"❌ Error with strategy {i+1} for {ROOM_TYPES[room]}: {e}")
+            if i < len(strategies) - 1:
+                continue
+            else:
+                return None
+    
+    if not response or response.status_code != 200:
         return None
 
     soup = BeautifulSoup(response.text, "html.parser")
-    
-    # Check if we got a CAPTCHA page
-    if "Radware Captcha Page" in response.text or "hcaptcha" in response.text.lower():
-        print(f"⚠️ CAPTCHA detected for {ROOM_TYPES[room]}. The website is blocking automated requests.")
-        return None
     
     # Try different container selectors
     container = None
@@ -166,9 +211,10 @@ def main():
                 'listings': []
             })
         
-        # Add delay between requests (except for the last one)
+        # Add longer delay between requests (15-20 seconds)
         if room < max(ROOM_TYPES.keys()):
-            time.sleep(10)
+            delay = random.uniform(15, 20)
+            time.sleep(delay)
     
     # Print final results
     for result in all_results:
