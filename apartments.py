@@ -24,6 +24,10 @@ def check_listings(room):
     }
 
     response = requests.get(BASE_URL, headers=HEADERS, params=params)
+    # Always save the HTML response for debugging
+    with open(f"debug_response_{room}.html", "w", encoding="utf-8") as f:
+        f.write(response.text)
+
     if response.status_code != 200:
         print(f"❌ Failed to fetch listings for {ROOM_TYPES[room]} (Status: {response.status_code})")
         return
@@ -41,10 +45,12 @@ def check_listings(room):
     for selector in container_selectors:
         container = soup.select_one(selector)
         if container:
+            print(f"✅ Found container for {ROOM_TYPES[room]} using selector: {selector}")
             break
     
     if not container:
         print(f"⚠️ Could not find listings container for {ROOM_TYPES[room]}. The page structure may have changed.")
+        print(f"📁 Saved debug HTML to debug_response_{room}.html")
         return
 
     # Check if there's a "no search found" message
@@ -54,6 +60,7 @@ def check_listings(room):
         return
 
     listings = container.find_all("section", class_="all-units-cards")
+    print(f"🔍 Found {len(listings)} total listings for {ROOM_TYPES[room]}")
     
     # Filter listings to only show those from the specified location
     filtered_listings = []
