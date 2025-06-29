@@ -53,9 +53,6 @@ def check_listings(room):
     for i, strategy in enumerate(strategies):
         try:
             response = strategy()
-            # Always save the HTML response for debugging
-            with open(f"debug_response_{room}.html", "w", encoding="utf-8") as f:
-                f.write(response.text)
             
             if response.status_code == 200:
                 # Check if we got a CAPTCHA page
