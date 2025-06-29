@@ -24,13 +24,29 @@ jobs:
         python -m pip install --upgrade pip
         pip install requests beautifulsoup4
         
-    - name: Run apartment checker
-      run: python apartments.py
-      
+    - name: Run apartment checker and capture output
+      id: apartment_check
+      run: |
+        python apartments.py > apartment_results.txt 2>&1
+        echo "results<<EOF" >> $GITHUB_OUTPUT
+        cat apartment_results.txt >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+        
     - name: Create summary
       run: |
         echo "## Apartment Availability Report" >> $GITHUB_STEP_SUMMARY
         echo "**Date:** $(date)" >> $GITHUB_STEP_SUMMARY
         echo "**Location:** Muhaisnah Fourth" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "Check completed successfully!" >> $GITHUB_STEP_SUMMARY 
+        echo "Check completed successfully!" >> $GITHUB_STEP_SUMMARY
+        
+    - name: Send Telegram notification
+      if: always()
+      run: |
+        RESULTS=$(cat apartment_results.txt)
+        if echo "$RESULTS" | grep -q "✅.*listing(s) found"; then
+          MESSAGE="🏠 *NEW APARTMENTS AVAILABLE!*%0A%0A📍 Location: Muhaisnah Fourth%0A📅 Date: $(date '+%Y-%m-%d')%0A⏰ Time: $(date '+%H:%M')%0A%0A$RESULTS%0A%0A🔗 View full results: https://github.com/nabeelpkl/apartment-checker/actions"
+        else
+          MESSAGE="🏠 *Apartment Check Complete*%0A%0A📍 Location: Muhaisnah Fourth%0A📅 Date: $(date '+%Y-%m-%d')%0A⏰ Time: $(date '+%H:%M')%0A%0A$RESULTS%0A%0A🔗 View full results: https://github.com/nabeelpkl/apartment-checker/actions"
+        fi
+        curl -s -X POST "https://api.telegram.org/bot7508698254:AAFnqGJxmyvvPcMHi_kqq2CNwa9DIH3JYDM/sendMessage" -d "chat_id=@nabeelpkl_apartments&text=$MESSAGE&parse_mode=Markdown" 
