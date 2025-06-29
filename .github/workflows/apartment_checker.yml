@@ -24,10 +24,18 @@ jobs:
         python -m pip install --upgrade pip
         pip install requests beautifulsoup4
         
+    - name: Clear any cached files
+      run: |
+        rm -f apartment_results.txt
+        rm -f debug_response_*.html
+        
     - name: Run apartment checker and capture output
       id: apartment_check
       run: |
+        echo "Starting apartment check at $(date)"
         python apartments.py > apartment_results.txt 2>&1
+        echo "Script completed. Results:"
+        cat apartment_results.txt
         echo "results<<EOF" >> $GITHUB_OUTPUT
         cat apartment_results.txt >> $GITHUB_OUTPUT
         echo "EOF" >> $GITHUB_OUTPUT
@@ -44,6 +52,8 @@ jobs:
       if: always()
       run: |
         RESULTS=$(cat apartment_results.txt)
+        echo "Sending Telegram notification with results:"
+        echo "$RESULTS"
         if echo "$RESULTS" | grep -q "✅.*listing(s) found"; then
           MESSAGE="🏠 *NEW APARTMENTS AVAILABLE!*%0A%0A📍 *Location:* Muhaisnah Fourth%0A📅 *Date:* $(date '+%Y-%m-%d')%0A⏰ *Time:* $(date '+%H:%M')%0A%0A━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%0A%0A$RESULTS%0A%0A━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         else
